@@ -22,6 +22,8 @@ class GenericAgentAdapter:
         self.agent_main = None
         self.ga_module = None
         self.run_thread: threading.Thread | None = None
+        self.pending_question: str | None = None
+        self.pending_candidates: list[str] = []
         self._lock = threading.RLock()
 
     def start(self) -> bool:
@@ -41,6 +43,7 @@ class GenericAgentAdapter:
 
                 ga_module.driver = self.browser_driver
                 self._install_optimized_web_tools(ga_module)
+                self._install_ask_user_hook()
 
                 self.agent_main = agentmain
                 self.ga_module = ga_module
@@ -72,6 +75,39 @@ class GenericAgentAdapter:
     def stop(self) -> None:
         if self.agent is not None and getattr(self.agent, "is_running", False):
             self.agent.abort()
+
+    def _install_ask_user_hook(self) -> None:
+        from plugins import hooks
+
+        def on_tool_after(ctx):
+            if ctx.get("tool_name") != "ask_user":
+                return ctx
+
+            ret = ctx.get("ret")
+            data = getattr(ret, "data", None)
+            if not isinstance(data, dict):
+                return ctx
+            if data.get("status") != "INTERRUPT" or data.get("intent") != "HUMAN_INTERVENTION":
+                return ctx
+
+            payload = data.get("data") or {}
+            question = str(payload.get("question") or "").strip()
+            candidates = payload.get("candidates") or []
+            self.pending_question = question
+            self.pending_candidates = [
+                str(candidate).strip()
+                for candidate in candidates
+                if candidate is not None and str(candidate).strip()
+            ]
+            return ctx
+
+        hooks.register("tool_after")(on_tool_after)
+
+    def consume_pending_question(self) -> str | None:
+        question = self.pending_question
+        self.pending_question = None
+        self.pending_candidates = []
+        return question
 
     def _install_optimized_web_tools(self, ga_module: Any) -> None:
         """Replace GenericAgent's heavy DOM-scanning web tools with lightweight bridge calls."""

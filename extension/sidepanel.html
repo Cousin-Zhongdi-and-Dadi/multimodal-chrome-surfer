@@ -89,6 +89,59 @@
         background: var(--danger);
       }
 
+      .activity-card {
+        margin: 10px 14px 0;
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-code);
+        color: var(--text-dim);
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        min-height: 2em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .activity-card.error {
+        border-color: var(--danger);
+        color: #ffb3ae;
+      }
+
+      .working-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 14px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: #a9c9ff;
+        font-size: 12px;
+      }
+
+      .working-indicator[hidden] {
+        display: none;
+      }
+
+      .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(169, 201, 255, 0.35);
+        border-top-color: #a9c9ff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       .messages {
         flex: 1 1 auto;
         overflow-y: auto;
@@ -215,7 +268,8 @@
         padding: 9px 11px;
         font: inherit;
         line-height: 1.4;
-        max-height: 120px;
+        min-height: calc(1.4em * 3 + 18px);
+        max-height: 200px;
       }
 
       .composer textarea:focus {
@@ -284,10 +338,15 @@
 
     <main id="output" class="messages" aria-live="polite"></main>
 
+    <div id="working-indicator" class="working-indicator" hidden>
+      <span class="spinner"></span>
+      <span>正在工作</span>
+    </div>
+
     <footer class="composer">
       <textarea
         id="task"
-        rows="1"
+        rows="3"
         placeholder="例如：在 B 站找到影视飓风最新视频，并跳转到 2 分 30 秒"
       ></textarea>
       <div class="composer-actions">

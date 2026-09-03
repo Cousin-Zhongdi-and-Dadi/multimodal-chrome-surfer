@@ -5,7 +5,7 @@ import uuid
 from typing import Any, Callable, Dict
 
 from browser_bridge import BrowserBridge
-from config import PLUGIN_OUTPUT_ENABLED
+from config import LOG_MODE, PLUGIN_OUTPUT_ENABLED
 from generic_agent_adapter import GenericAgentAdapter
 from messages import (
     AGENT_ASK_USER,
@@ -34,6 +34,15 @@ class LocalAgentService:
         self._lock = threading.RLock()
 
     def start(self) -> None:
+        logger.info(
+            "service start log_mode=%s plugin_output_enabled=%s",
+            LOG_MODE,
+            PLUGIN_OUTPUT_ENABLED,
+        )
+        self.agent_output_logger.info(
+            "task=start | 服务启动 log_mode=%s",
+            LOG_MODE,
+        )
         self.adapter.start()
 
     def handle_message(self, message: Dict[str, Any]) -> None:
@@ -41,6 +50,8 @@ class LocalAgentService:
 
         if message_type == "ping":
             return
+
+        logger.info("handle message type=%s", message_type)
 
         if message_type == BROWSER_RESPONSE:
             self.bridge.handle_response(message)
@@ -92,6 +103,7 @@ class LocalAgentService:
                 "queue": output_queue,
                 "thread": None,
                 "event_buffer": "",
+                "stopped": False,
             }
 
         thread = threading.Thread(
@@ -105,10 +117,15 @@ class LocalAgentService:
         thread.start()
 
     def stop_task(self, task_id: str | None = None) -> None:
+        target_id = task_id or self.active_task_id
         logger.info("task stop task_id=%s active_task_id=%s", task_id, self.active_task_id)
+
+        with self._lock:
+            if target_id and target_id in self.tasks:
+                self.tasks[target_id]["stopped"] = True
+
         self.adapter.stop()
-        target_id = task_id or self.active_task_id or "task"
-        self._emit_output(target_id, "\n[系统] 任务已停止\n")
+        self._send_plugin_event(target_id or "task", "[系统] 任务已停止")
 
     def handle_user_answer(self, question_id: str | None, answer: Any) -> None:
         answer_text = str(answer or "").strip()
@@ -122,6 +139,11 @@ class LocalAgentService:
 
     def _pump_task(self, task_id: str, output_queue: queue.Queue) -> None:
         while True:
+            with self._lock:
+                state = self.tasks.get(task_id)
+                if not state or state.get("stopped"):
+                    break
+
             try:
                 item = output_queue.get(timeout=0.25)
             except queue.Empty:
@@ -192,18 +214,9 @@ class LocalAgentService:
         if not stripped:
             return None
 
-        if "LLM Running" in stripped or re.search(r"\bTurn\s+\d+", stripped):
-            match = re.search(r"Turn\s+(\d+)", stripped)
-            if match:
-                return f"[迭代] 第 {match.group(1)} 轮"
-            return stripped
-
         tool_match = re.search(r"Tool:\s*`([^`]+)`", stripped)
         if tool_match:
             return f"[工具] {tool_match.group(1)}"
-
-        if "Backend Error" in stripped or "Error:" in stripped:
-            return f"[错误] {stripped[:240]}"
 
         return None
 
@@ -211,11 +224,36 @@ class LocalAgentService:
         if "Waiting for your answer" not in text:
             return
 
+        question = self.adapter.consume_pending_question()
+        if not question:
+            question = self._extract_ask_user_question(text)
+        if not question:
+            question = "Agent 请求确认"
+
         self.send_to_extension({
             "type": AGENT_ASK_USER,
             "questionId": task_id,
-            "question": text.strip() or "Agent 请求确认",
+            "question": question,
         })
+
+    @staticmethod
+    def _extract_ask_user_question(text: str) -> str:
+        match = re.search(
+            r"Tool:\s*`ask_user`.*?\"question\"\s*:\s*\"((?:[^\"\\]|\\.)*)\"",
+            text,
+            re.DOTALL,
+        )
+        if not match:
+            return ""
+
+        raw = match.group(1)
+        return (
+            raw.replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace('\\"', '"')
+            .strip()
+        )
 
     def _emit_output(self, task_id: str | None, text: str) -> None:
         self._send_plugin_event(task_id, text)

@@ -5,8 +5,12 @@ const sendButton = document.getElementById("send");
 const stopButton = document.getElementById("stop");
 const statusElement = document.getElementById("status");
 const outputElement = document.getElementById("output");
+const workingIndicator = document.getElementById("working-indicator");
 
-const MAX_MESSAGES = 400;
+const activityElement = document.createElement("div");
+activityElement.className = "activity-card";
+activityElement.hidden = true;
+
 let activeTaskId = null;
 
 sendButton.addEventListener("click", submitTask);
@@ -17,6 +21,14 @@ taskInput.addEventListener("keydown", (event) => {
     submitTask();
   }
 });
+taskInput.addEventListener("input", autoResize);
+
+function autoResize() {
+  taskInput.style.height = "auto";
+  taskInput.style.height = `${Math.min(taskInput.scrollHeight, 200)}px`;
+}
+
+autoResize();
 
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || message.target !== "sidepanel") {
@@ -31,9 +43,12 @@ chrome.runtime.onMessage.addListener((message) => {
       addOutputMessage(message.text || "");
       break;
     case MSG.AGENT_FINAL:
+      hideActivity();
+      hideWorking();
       addMessage("assistant", message.text || "");
       break;
     case MSG.AGENT_ASK_USER:
+      hideActivity();
       renderQuestion(message);
       break;
     default:
@@ -49,7 +64,10 @@ function submitTask() {
 
   activeTaskId = newId();
   taskInput.value = "";
+  hideActivity();
+  showWorking();
   addMessage("user", text);
+  ensureActivityInStream();
   sendMessage(backgroundMessage(MSG.TASK_START, {
     taskId: activeTaskId,
     text
@@ -64,7 +82,8 @@ function stopTask() {
   sendMessage(backgroundMessage(MSG.TASK_STOP, {
     taskId: activeTaskId
   }));
-  addMessage("system", "已发送停止请求");
+  hideWorking();
+  updateActivity("任务已停止");
 }
 
 function setStatus(connected) {
@@ -76,7 +95,7 @@ function setStatus(connected) {
 
 function sendMessage(message) {
   chrome.runtime.sendMessage(message).catch((error) => {
-    addMessage("error", error.message);
+    updateActivity(`错误：${error.message}`, "error");
   });
 }
 
@@ -87,21 +106,21 @@ function addOutputMessage(text) {
   }
 
   if (trimmed.startsWith("[错误]")) {
-    addMessage("error", trimmed.replace(/^\[错误\]\s*/, ""));
+    updateActivity(trimmed.replace(/^\[错误\]\s*/, ""), "error");
     return;
   }
 
   if (trimmed.startsWith("[系统]")) {
-    addMessage("system", trimmed.replace(/^\[系统\]\s*/, ""));
+    updateActivity(trimmed.replace(/^\[系统\]\s*/, ""));
     return;
   }
 
   if (trimmed.startsWith("[迭代]") || trimmed.startsWith("[工具]")) {
-    addMessage("event", trimmed);
+    updateActivity(trimmed.replace(/^\[(迭代|工具)\]\s*/, ""));
     return;
   }
 
-  addMessage("system", trimmed);
+  updateActivity(trimmed);
 }
 
 function addMessage(kind, text) {
@@ -121,14 +140,36 @@ function addMessage(kind, text) {
   row.appendChild(bubble);
 
   outputElement.appendChild(row);
-  trimMessages();
   outputElement.scrollTop = outputElement.scrollHeight;
 }
 
-function trimMessages() {
-  while (outputElement.children.length > MAX_MESSAGES) {
-    outputElement.removeChild(outputElement.firstElementChild);
+function updateActivity(text, kind = "tool") {
+  ensureActivityInStream();
+  activityElement.hidden = false;
+  activityElement.textContent = text;
+  activityElement.className = `activity-card${kind === "error" ? " error" : ""}`;
+  outputElement.scrollTop = outputElement.scrollHeight;
+}
+
+function hideActivity() {
+  activityElement.hidden = true;
+  activityElement.textContent = "";
+  activityElement.className = "activity-card";
+  activityElement.remove();
+}
+
+function ensureActivityInStream() {
+  if (activityElement.parentElement !== outputElement) {
+    outputElement.appendChild(activityElement);
   }
+}
+
+function showWorking() {
+  workingIndicator.hidden = false;
+}
+
+function hideWorking() {
+  workingIndicator.hidden = true;
 }
 
 function renderQuestion(message) {
@@ -162,7 +203,6 @@ function renderQuestion(message) {
 
   row.appendChild(container);
   outputElement.appendChild(row);
-  trimMessages();
   outputElement.scrollTop = outputElement.scrollHeight;
 }
 
