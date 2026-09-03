@@ -1,0 +1,9 @@
+{
+  "name": "com.multimodal.browser_agent",
+  "description": "Local GenericAgent host for the Multimodal Browser Agent extension.",
+  "path": "C:\\Users\\32583\\Documents\\code\\multimodal-chrome-surfer\\local-agent\\main.py",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_WITH_EXTENSION_ID/"
+  ]
+}

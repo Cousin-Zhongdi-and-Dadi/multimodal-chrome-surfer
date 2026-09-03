@@ -1,0 +1,12 @@
+from pathlib import Path
+
+LOCAL_AGENT_ROOT = Path(__file__).resolve().parent
+WORKSPACE_ROOT = LOCAL_AGENT_ROOT.parent
+GENERIC_AGENT_ROOT = WORKSPACE_ROOT / "GenericAgent"
+EXTENSION_ROOT = WORKSPACE_ROOT / "extension"
+LOG_DIR = LOCAL_AGENT_ROOT / "logs"
+
+NATIVE_HOST_NAME = "com.multimodal.browser_agent"
+
+DEFAULT_BROWSER_TIMEOUT_SECONDS = 30
+DEFAULT_TASK_TIMEOUT_SECONDS = 1800

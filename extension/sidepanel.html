@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>多模态浏览器助手</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin: 0 0 12px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        box-sizing: border-box;
+        resize: vertical;
+        padding: 10px;
+        font: inherit;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      button {
+        padding: 8px 12px;
+        font: inherit;
+      }
+
+      #status {
+        min-height: 18px;
+        margin: 12px 0 8px;
+        color: #666;
+        font-size: 13px;
+      }
+
+      #output {
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 55vh;
+        overflow: auto;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.03);
+        font-family: "Consolas", "Microsoft YaHei", monospace;
+        font-size: 13px;
+      }
+
+      .question {
+        border: 1px solid #d9a441;
+        background: rgba(217, 164, 65, 0.1);
+        border-radius: 6px;
+        padding: 10px;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>多模态浏览器助手</h1>
+    <textarea id="task" placeholder="例如：在 B 站找到影视飓风最新视频，并跳转到 2 分 30 秒"></textarea>
+    <div class="toolbar">
+      <button id="send">开始任务</button>
+      <button id="stop">停止</button>
+    </div>
+    <div id="status">正在初始化...</div>
+    <div id="output"></div>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>

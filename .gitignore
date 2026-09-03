@@ -1,0 +1,52 @@
+# GenericAgent 源码仓库单独维护，不纳入本仓库跟踪
+GenericAgent/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / 前端构建产物
+node_modules/
+dist/
+build/
+*.crx
+*.pem
+
+# 日志和临时文件
+*.log
+logs/
+temp/
+tmp/
+*.tmp
+*.swp
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.iml
+
+# 操作系统
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 本地敏感配置
+mykey.py
+*secret*
+*.key
