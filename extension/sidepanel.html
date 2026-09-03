@@ -15,6 +15,7 @@
         --text-dim: #9aa0a6;
         --accent: #4c8dff;
         --accent-soft: rgba(76, 141, 255, 0.15);
+        --accent-contrast: #3f74d9;
         --user: #2b6e3b;
         --assistant: #2f3440;
         --danger: #e5534b;
@@ -119,7 +120,7 @@
         border: 1px solid var(--border);
         border-radius: 8px;
         background: var(--accent-soft);
-        color: #a9c9ff;
+        color: var(--accent-contrast);
         font-size: 12px;
       }
 
@@ -130,8 +131,8 @@
       .spinner {
         width: 14px;
         height: 14px;
-        border: 2px solid rgba(169, 201, 255, 0.35);
-        border-top-color: #a9c9ff;
+        border: 2px solid color-mix(in srgb, var(--accent-contrast) 35%, transparent);
+        border-top-color: var(--accent-contrast);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
@@ -206,7 +207,7 @@
       .row.system .bubble {
         align-self: center;
         background: var(--accent-soft);
-        color: #a9c9ff;
+        color: var(--accent-contrast);
         font-size: 12px;
         border-radius: 8px;
       }
@@ -215,6 +216,65 @@
         background: rgba(229, 83, 75, 0.15);
         border: 1px solid rgba(229, 83, 75, 0.4);
         color: #ffb3ae;
+      }
+
+      .row.assistant .bubble p,
+      .row.assistant .bubble ul,
+      .row.assistant .bubble ol,
+      .row.assistant .bubble blockquote,
+      .row.assistant .bubble pre,
+      .row.assistant .bubble table {
+        margin: 6px 0;
+      }
+
+      .row.assistant .bubble ul,
+      .row.assistant .bubble ol {
+        padding-left: 20px;
+      }
+
+      .row.assistant .bubble code {
+        background: var(--bg-code);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 4px;
+        font-family: "Cascadia Code", "Consolas", monospace;
+      }
+
+      .row.assistant .bubble pre {
+        background: var(--bg-code);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 9px 11px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+
+      .row.assistant .bubble pre code {
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+
+      .row.assistant .bubble table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .row.assistant .bubble th,
+      .row.assistant .bubble td {
+        border: 1px solid var(--border);
+        padding: 5px 7px;
+      }
+
+      .row.assistant .bubble a {
+        color: var(--accent);
+      }
+
+      .row.assistant .bubble blockquote {
+        border-left: 3px solid var(--accent);
+        margin-left: 0;
+        padding-left: 10px;
+        color: var(--text-dim);
       }
 
       .question {
@@ -297,6 +357,11 @@
         background: rgba(255, 255, 255, 0.06);
       }
 
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       button.primary {
         background: var(--accent);
         border-color: var(--accent);
@@ -319,6 +384,7 @@
           --border: #dcdfe4;
           --text: #1f2328;
           --text-dim: #6a737d;
+          --accent-contrast: #1d4ed8;
           --assistant: #ffffff;
         }
       }
@@ -350,11 +416,12 @@
         placeholder="例如：在 B 站找到影视飓风最新视频，并跳转到 2 分 30 秒"
       ></textarea>
       <div class="composer-actions">
-        <button id="stop" class="ghost" type="button">停止</button>
+        <button id="stop" class="ghost" type="button" disabled>停止</button>
         <button id="send" class="primary" type="button">发送</button>
       </div>
     </footer>
 
+    <script src="vendor/marked.min.js"></script>
     <script type="module" src="sidepanel.js"></script>
   </body>
 </html>

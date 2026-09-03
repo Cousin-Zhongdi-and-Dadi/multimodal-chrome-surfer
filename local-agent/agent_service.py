@@ -160,6 +160,7 @@ class LocalAgentService:
                 self._log_agent_output(task_id, done_text)
                 self._forward_main_events(task_id, "", flush=True)
                 final_answer = self._extract_final_answer(done_text)
+                final_answer = self._clean_final_answer(final_answer)
                 self._send_final_answer(task_id, final_answer)
                 self._maybe_emit_question(task_id, done_text)
                 with self._lock:
@@ -176,6 +177,16 @@ class LocalAgentService:
                 return candidate.strip()
 
         return done_text.strip()
+
+    @staticmethod
+    def _clean_final_answer(text: str) -> str:
+        text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<summary>.*?</summary>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<tool_use>.*?</tool_use>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<file_content>.*?</file_content>", "", text, flags=re.DOTALL)
+        text = re.sub(r"🛠️\s+Tool:.*?(?=\n(?:\*\*LLM Running|\Z)|\Z)", "", text, flags=re.DOTALL)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
 
     def _log_agent_output(self, task_id: str, text: str) -> None:
         if text:

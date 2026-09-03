@@ -12,6 +12,7 @@ activityElement.className = "activity-card";
 activityElement.hidden = true;
 
 let activeTaskId = null;
+let isRunning = false;
 
 sendButton.addEventListener("click", submitTask);
 stopButton.addEventListener("click", stopTask);
@@ -45,6 +46,7 @@ chrome.runtime.onMessage.addListener((message) => {
     case MSG.AGENT_FINAL:
       hideActivity();
       hideWorking();
+      setRunning(false);
       addMessage("assistant", message.text || "");
       break;
     case MSG.AGENT_ASK_USER:
@@ -57,6 +59,10 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 function submitTask() {
+  if (isRunning) {
+    return;
+  }
+
   const text = taskInput.value.trim();
   if (!text) {
     return;
@@ -66,6 +72,7 @@ function submitTask() {
   taskInput.value = "";
   hideActivity();
   showWorking();
+  setRunning(true);
   addMessage("user", text);
   ensureActivityInStream();
   sendMessage(backgroundMessage(MSG.TASK_START, {
@@ -83,7 +90,14 @@ function stopTask() {
     taskId: activeTaskId
   }));
   hideWorking();
+  setRunning(false);
   updateActivity("任务已停止");
+}
+
+function setRunning(running) {
+  isRunning = Boolean(running);
+  sendButton.disabled = isRunning;
+  stopButton.disabled = !isRunning;
 }
 
 function setStatus(connected) {
@@ -136,7 +150,11 @@ function addMessage(kind, text) {
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = text;
+  if (kind === "assistant") {
+    bubble.innerHTML = renderMarkdown(text);
+  } else {
+    bubble.textContent = text;
+  }
   row.appendChild(bubble);
 
   outputElement.appendChild(row);
@@ -170,6 +188,80 @@ function showWorking() {
 
 function hideWorking() {
   workingIndicator.hidden = true;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderMarkdown(text) {
+  if (typeof marked === "undefined") {
+    return escapeHtml(text).replace(/\n/g, "<br>");
+  }
+
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    mangle: false,
+    headerIds: false
+  });
+
+  const html = marked.parse(String(text || ""));
+  return sanitizeHtml(html);
+}
+
+function sanitizeHtml(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const allowedTags = new Set([
+    "p", "br", "strong", "em", "b", "i", "u", "s", "del",
+    "code", "pre", "blockquote", "ul", "ol", "li",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "a", "img", "hr", "input"
+  ]);
+
+  const allowedAttrs = new Set([
+    "href", "src", "alt", "title", "align", "class",
+    "colspan", "rowspan", "start", "type", "checked", "disabled"
+  ]);
+
+  for (const element of Array.from(template.content.querySelectorAll("*"))) {
+    const tag = element.tagName.toLowerCase();
+    if (!allowedTags.has(tag)) {
+      element.replaceWith(...element.childNodes);
+      continue;
+    }
+
+    for (const attr of Array.from(element.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (!allowedAttrs.has(name) || name.startsWith("on")) {
+        element.removeAttribute(attr.name);
+      }
+    }
+
+    if (tag === "a") {
+      const href = (element.getAttribute("href") || "").trim().toLowerCase();
+      if (href.startsWith("javascript:") || href.startsWith("data:")) {
+        element.removeAttribute("href");
+      }
+    }
+
+    if (tag === "img") {
+      const src = (element.getAttribute("src") || "").trim().toLowerCase();
+      if (src.startsWith("javascript:") || src.startsWith("data:")) {
+        element.removeAttribute("src");
+      }
+    }
+  }
+
+  return template.innerHTML;
 }
 
 function renderQuestion(message) {
