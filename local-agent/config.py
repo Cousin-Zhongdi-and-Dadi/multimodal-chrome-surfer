@@ -14,5 +14,8 @@ DEFAULT_TASK_TIMEOUT_SECONDS = 1800
 # 是否把智能体关键事件输出到插件。调试瓶颈时可临时设为 False。
 PLUGIN_OUTPUT_ENABLED = True
 
+# 调试开关：True=详细日志；False=发布状态，仅记录 error 级日志。
+DEBUG = False
+
 # 日志模式：append=追加到旧日志末尾；clear=每次执行开始时清空日志重新写入。
-LOG_MODE = "clear"
+LOG_MODE = "append"
