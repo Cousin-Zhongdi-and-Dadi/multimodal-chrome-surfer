@@ -1,0 +1,9 @@
+﻿{
+    "path":  "C:\\Users\\32583\\Documents\\code\\multimodal-chrome-surfer\\local-agent\\host_runner.cmd",
+    "description":  "Local GenericAgent host for the Multimodal Browser Agent extension.",
+    "name":  "com.multimodal.browser_agent",
+    "allowed_origins":  [
+                            "chrome-extension://ifjmbpafakkbalkokaockfddhngcaged/"
+                        ],
+    "type":  "stdio"
+}

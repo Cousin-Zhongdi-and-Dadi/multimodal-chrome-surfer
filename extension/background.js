@@ -5,6 +5,7 @@ const RECONNECT_DELAY_MS = 1000;
 let nativePort = null;
 let reconnectTimer = null;
 let outputToSidepanel = true;
+let offscreenCreating = false;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.target !== "background") {
@@ -72,7 +73,30 @@ function connectNative() {
     broadcastToSidepanel({ type: MSG.NATIVE_STATUS, connected: false });
   });
 
+  ensureOffscreen();
   broadcastToSidepanel({ type: MSG.NATIVE_STATUS, connected: true });
+}
+
+async function ensureOffscreen() {
+  if (offscreenCreating) {
+    return;
+  }
+
+  offscreenCreating = true;
+  try {
+    const hasDocument = await chrome.offscreen.hasDocument();
+    if (!hasDocument) {
+      await chrome.offscreen.createDocument({
+        url: "offscreen.html",
+        reasons: ["DOM_SCRAPING"],
+        justification: "Keep the native messaging bridge alive during long-running browser agent tasks."
+      });
+    }
+  } catch (error) {
+    console.warn("[offscreen] createDocument failed", error);
+  } finally {
+    offscreenCreating = false;
+  }
 }
 
 function scheduleReconnect() {
@@ -122,7 +146,11 @@ function handleNativeMessage(message) {
     return;
   }
 
-  if (message.type === MSG.AGENT_OUTPUT || message.type === MSG.AGENT_ASK_USER) {
+  if (
+    message.type === MSG.AGENT_OUTPUT ||
+    message.type === MSG.AGENT_FINAL ||
+    message.type === MSG.AGENT_ASK_USER
+  ) {
     broadcastToSidepanel(message);
     return;
   }
@@ -228,6 +256,26 @@ function snapshotPage({ textOnly = false, maxElements = 120 } = {}) {
   const url = location.href;
   const readyState = document.readyState;
 
+  function buildSelector(element) {
+    if (element.id) {
+      return `#${CSS.escape(element.id)}`;
+    }
+
+    const parts = [];
+    let current = element;
+    while (current && current !== document.body && parts.length < 4) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += `#${CSS.escape(current.id)}`;
+      } else if (current.classList?.length) {
+        part += "." + Array.from(current.classList).slice(0, 2).map((name) => CSS.escape(name)).join(".");
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return parts.join(" > ");
+  }
+
   const elements = [];
   const selectors = "button, a, input, textarea, select, [role='button'], [role='link'], [contenteditable='true']";
   const all = Array.from(root.querySelectorAll(selectors)).filter((element) => {
@@ -273,26 +321,6 @@ function snapshotPage({ textOnly = false, maxElements = 120 } = {}) {
     bodyText,
     elements
   };
-}
-
-function buildSelector(element) {
-  if (element.id) {
-    return `#${CSS.escape(element.id)}`;
-  }
-
-  const parts = [];
-  let current = element;
-  while (current && current !== document.body && parts.length < 4) {
-    let part = current.tagName.toLowerCase();
-    if (current.id) {
-      part += `#${CSS.escape(current.id)}`;
-    } else if (current.classList?.length) {
-      part += "." + Array.from(current.classList).slice(0, 2).map((name) => CSS.escape(name)).join(".");
-    }
-    parts.unshift(part);
-    current = current.parentElement;
-  }
-  return parts.join(" > ");
 }
 
 function executeActionInPage(action = {}) {
@@ -444,10 +472,24 @@ function evaluatePageCode(code) {
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[background] Multimodal Browser Agent installed");
+  ensureOffscreen();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   connectNative();
+  ensureOffscreen();
+});
+
+chrome.alarms.create("agent-keepalive", { periodInMinutes: 0.5 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== "agent-keepalive") {
+    return;
+  }
+
+  ensureOffscreen();
+  if (nativePort) {
+    sendToNative({ type: "ping" });
+  }
 });
 
 connectNative();

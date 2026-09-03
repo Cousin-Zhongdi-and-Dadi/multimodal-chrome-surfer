@@ -1,7 +1,11 @@
+import time
 from typing import Any
 
 from browser_bridge import BrowserBridge, BrowserBridgeError
 from config import DEFAULT_BROWSER_TIMEOUT_SECONDS
+from logger import build_logger
+
+logger = build_logger("native_driver")
 
 
 class NativeMessagingDriver:
@@ -13,6 +17,7 @@ class NativeMessagingDriver:
         self.latest_session_id: str | None = None
 
     def get_all_sessions(self) -> list[dict[str, Any]]:
+        started_at = time.monotonic()
         tabs = self.bridge.request("list_tabs") or []
         sessions = []
 
@@ -28,6 +33,11 @@ class NativeMessagingDriver:
             if session["active"] or self.default_session_id is None:
                 self.default_session_id = session["id"]
 
+        logger.info(
+            "list_tabs done tab_count=%s elapsed_ms=%.1f",
+            len(sessions),
+            (time.monotonic() - started_at) * 1000,
+        )
         return sessions
 
     def get_session_dict(self) -> dict[str, str]:
@@ -57,10 +67,17 @@ class NativeMessagingDriver:
         if not target_id or target_id == "None":
             raise ValueError("No active browser tab available")
 
+        started_at = time.monotonic()
         result = self.bridge.request(
             "execute_js",
             {"tabId": target_id, "code": code},
             timeout=timeout,
+        )
+        logger.info(
+            "execute_js done target_tab=%s code_chars=%s elapsed_ms=%.1f",
+            target_id,
+            len(code),
+            (time.monotonic() - started_at) * 1000,
         )
 
         if isinstance(result, dict):
