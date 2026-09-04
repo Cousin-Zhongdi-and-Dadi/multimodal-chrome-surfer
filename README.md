@@ -49,6 +49,14 @@
 - Python 3.11、3.12 或 3.13
 - 可选：`uv` 用于创建虚拟环境
 
+## 克隆该仓库
+
+> **注意：** 该仓库包含子模块 GenericAgent，来自 [GenericAgent](https://github.com/lsdefine/GenericAgent)，克隆时请使用 `--recurse-submodules` 参数。
+
+```bash
+git clone --recurse-submodules https://github.com/Cousin-Zhongdi-and-Dadi/multimodal-chrome-surfer.git
+```
+
 ## 安装浏览器插件
 
 1. 打开 Chrome 的扩展管理页面：
@@ -293,13 +301,7 @@ local-agent\logs\agent-output.log
 
 ## 关于 GenericAgent
 
-本项目基于 [GenericAgent](https://github.com/lsdefine/GenericAgent) 构建，并在工作区中保留其源码：
-
-```text
-GenericAgent/
-```
-
-GenericAgent 采用 MIT License 发布。其设计思想是“最小核心工具 + Agent Loop + 分层记忆 + 自我进化”，本项目的本地智能体服务复用了该框架的 Agent Loop、工具层、记忆层和浏览器驱动能力。
+本项目基于 [GenericAgent](https://github.com/lsdefine/GenericAgent) 构建，GenericAgent 采用 MIT License 发布。其设计思想是“最小核心工具 + Agent Loop + 分层记忆 + 自我进化”，本项目的本地智能体服务复用了该框架的 Agent Loop、工具层、记忆层和浏览器驱动能力。
 
 ## 免责声明
 

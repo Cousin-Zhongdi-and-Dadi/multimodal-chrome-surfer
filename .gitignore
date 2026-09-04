@@ -1,6 +1,3 @@
-# GenericAgent 源码仓库单独维护，不纳入本仓库跟踪
-GenericAgent/
-
 # Python
 __pycache__/
 *.py[cod]
